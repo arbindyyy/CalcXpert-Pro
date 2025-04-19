@@ -1,0 +1,667 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalcXpert Pro - Multi-Calculator Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .spinner { border: 4px solid rgba(0,0,0,0.1); border-left-color: #2563eb; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+    <div id="loading" class="fixed inset-0 bg-white flex items-center justify-center">
+        <div class="spinner"></div>
+    </div>
+    <header class="bg-blue-600 text-white p-4 flex flex-col sm:flex-row justify-between items-center">
+        <div class="flex items-center space-x-4 mb-2 sm:mb-0">
+            <h1 class="text-2xl font-bold">CalcXpert Pro</h1>
+            <select id="language" class="p-2 rounded text-black">
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+                <option value="zh">Chinese (Mandarin)</option>
+                <option value="es">Spanish</option>
+                <option value="ar">Arabic</option>
+                <option value="fr">French</option>
+                <option value="ru">Russian</option>
+                <option value="pt">Portuguese</option>
+                <option value="ja">Japanese</option>
+            </select>
+        </div>
+        <input type="text" id="search" placeholder="Search Calculator..." class="p-2 rounded text-black" data-translate="search">
+    </header>
+    <div class="flex min-h-screen">
+        <nav class="w-full sm:w-48 bg-gray-200 p-4">
+            <h2 class="text-lg font-semibold mb-4" data-translate="calculators">Calculators</h2>
+            <ul id="calc-menu">
+                <li><button data-calc="emi" class="w-full text-left p-2 rounded bg-blue-500 text-white mb-1" data-translate="emi_calc">EMI Calculator</button></li>
+                <li><button data-calc="sip" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="sip_calc">SIP Calculator</button></li>
+                <li><button data-calc="lumpsum" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="lumpsum_calc">Lumpsum Calculator</button></li>
+                <li><button data-calc="fd" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="fd_calc">FD Calculator</button></li>
+                <li><button data-calc="rd" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="rd_calc">RD Calculator</button></li>
+                <li><button data-calc="gst" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="gst_calc">GST Calculator</button></li>
+                <li><button data-calc="income-tax" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="income_tax_calc">Income Tax Calculator</button></li>
+                <li><button data-calc="bmi" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="bmi_calc">BMI Calculator</button></li>
+                <li><button data-calc="bmr" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="bmr_calc">BMR Calculator</button></li>
+                <li><button data-calc="ideal-weight" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="ideal_weight_calc">Ideal Weight Calculator</button></li>
+                <li><button data-calc="pregnancy" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="pregnancy_calc">Pregnancy Due Date</button></li>
+                <li><button data-calc="calorie" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="calorie_calc">Calorie Calculator</button></li>
+                <li><button data-calc="age" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="age_calc">Age Calculator</button></li>
+                <li><button data-calc="date-diff" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="date_diff_calc">Date Difference</button></li>
+                <li><button data-calc="time-duration" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="time_duration_calc">Time Duration</button></li>
+                <li><button data-calc="percentage" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="percentage_calc">Percentage Calculator</button></li>
+                <li><button data-calc="cgpa" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="cgpa_calc">CGPA to Percentage</button></li>
+                <li><button data-calc="unit" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="unit_conv">Unit Converter</button></li>
+                <li><button data-calc="split" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="split_calc">Split Bill</button></li>
+                <li><button data-calc="discount" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="discount_calc">Discount Calculator</button></li>
+                <li><button data-calc="fuel" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="fuel_calc">Fuel Cost</button></li>
+                <li><button data-calc="history" class="w-full text-left p-2 rounded hover:bg-gray-300 mb-1" data-translate="history">History</button></li>
+            </ul>
+        </nav>
+        <main class="flex-1 p-4">
+            <div id="emi" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-bold mb-4" data-translate="emi_calc">EMI Calculator</h2>
+                <input type="number" id="emi-amount" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="loan_amount" placeholder="Loan Amount (₹)">
+                <input type="number" id="emi-rate" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="interest_rate" placeholder="Interest Rate (%)">
+                <input type="number" id="emi-tenure" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="tenure" placeholder="Tenure (Months)">
+                <button id="emi-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="emi-result">EMI: 0.00 ₹</p>
+                <p id="emi-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="sip" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="sip_calc">SIP Calculator</h2>
+                <input type="number" id="sip-amount" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="monthly_investment" placeholder="Monthly Investment (₹)">
+                <input type="number" id="sip-rate" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="return_rate" placeholder="Expected Annual Return (%)">
+                <input type="number" id="sip-tenure" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="duration" placeholder="Investment Duration (Years)">
+                <button id="sip-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="sip-result">Future Value: 0.00 ₹</p>
+                <p id="sip-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="lumpsum" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="lumpsum_calc">Lumpsum Calculator</h2>
+                <input type="number" id="lumpsum-amount" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="one_time_investment" placeholder="One-time Investment (₹)">
+                <input type="number" id="lumpsum-rate" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="return_rate" placeholder="Annual Return Rate (%)">
+                <input type="number" id="lumpsum-tenure" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="duration" placeholder="Duration (Years)">
+                <button id="lumpsum-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="lumpsum-result">Future Value: 0.00 ₹</p>
+                <p id="lumpsum-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="fd" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="fd_calc">FD Calculator</h2>
+                <input type="number" id="fd-amount" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="deposit_amount" placeholder="Deposit Amount (₹)">
+                <input type="number" id="fd-rate" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="interest_rate" placeholder="Interest Rate (%)">
+                <input type="number" id="fd-tenure" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="tenure" placeholder="Tenure (Months)">
+                <select id="fd-frequency" class="w-full p-2 mb-4 border rounded">
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="yearly">Yearly</option>
+                </select>
+                <button id="fd-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="fd-result">Maturity Amount: 0.00 ₹</p>
+                <p id="fd-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="rd" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="rd_calc">RD Calculator</h2>
+                <input type="number" id="rd-amount" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="monthly_deposit" placeholder="Monthly Deposit (₹)">
+                <input type="number" id="rd-rate" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="interest_rate" placeholder="Interest Rate (%)">
+                <input type="number" id="rd-tenure" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="tenure" placeholder="Tenure (Months)">
+                <button id="rd-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="rd-result">Maturity Amount: 0.00 ₹</p>
+                <p id="rd-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="gst" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="gst_calc">GST Calculator</h2>
+                <input type="number" id="gst-amount" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="amount" placeholder="Amount (₹)">
+                <input type="number" id="gst-rate" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="gst_rate" placeholder="GST Rate (%)">
+                <select id="gst-mode" class="w-full p-2 mb-4 border rounded">
+                    <option value="add">Add GST</option>
+                    <option value="remove">Remove GST</option>
+                </select>
+                <button id="gst-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="gst-result">Result: 0.00 ₹</p>
+                <p id="gst-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="income-tax" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="income_tax_calc">Income Tax Calculator</h2>
+                <input type="number" id="income-amount" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="annual_income" placeholder="Annual Income (₹)">
+                <select id="income-age" class="w-full p-2 mb-4 border rounded">
+                    <option value="below60">Below 60</option>
+                    <option value="60+">60+</option>
+                </select>
+                <input type="number" id="income-deduction" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="deduction" placeholder="Deduction (₹)">
+                <button id="income-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="income-result">Tax: 0.00 ₹</p>
+                <p id="income-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="bmi" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="bmi_calc">BMI Calculator</h2>
+                <input type="number" id="bmi-weight" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="weight" placeholder="Weight (kg)">
+                <input type="number" id="bmi-height" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="height" placeholder="Height (cm)">
+                <button id="bmi-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="bmi-result">BMI: 0.00</p>
+                <p id="bmi-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="bmr" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="bmr_calc">BMR Calculator</h2>
+                <input type="number" id="bmr-weight" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="weight" placeholder="Weight (kg)">
+                <input type="number" id="bmr-height" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="height" placeholder="Height (cm)">
+                <input type="number" id="bmr-age" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="age" placeholder="Age (Years)">
+                <select id="bmr-gender" class="w-full p-2 mb-4 border rounded">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+                <select id="bmr-activity" class="w-full p-2 mb-4 border rounded">
+                    <option value="sedentary">Sedentary</option>
+                    <option value="active">Active</option>
+                </select>
+                <button id="bmr-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="bmr-result">BMR: 0.00 kcal</p>
+                <p id="bmr-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="ideal-weight" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="ideal_weight_calc">Ideal Weight Calculator</h2>
+                <input type="number" id="ideal-height" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="height" placeholder="Height (cm)">
+                <select id="ideal-gender" class="w-full p-2 mb-4 border rounded">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+                <button id="ideal-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="ideal-result">Ideal Weight: 0.00 kg</p>
+                <p id="ideal-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="pregnancy" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="pregnancy_calc">Pregnancy Due Date</h2>
+                <input type="date" id="pregnancy-lmp" class="w-full p-2 mb-4 border rounded">
+                <button id="pregnancy-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="pregnancy-result">Due Date: </p>
+                <p id="pregnancy-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="calorie" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="calorie_calc">Calorie Calculator</h2>
+                <input type="number" id="calorie-age" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="age" placeholder="Age">
+                <select id="calorie-gender" class="w-full p-2 mb-4 border rounded">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+                <input type="number" id="calorie-height" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="height" placeholder="Height (cm)">
+                <input type="number" id="calorie-weight" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="weight" placeholder="Weight (kg)">
+                <select id="calorie-activity" class="w-full p-2 mb-4 border rounded">
+                    <option value="sedentary">Sedentary</option>
+                    <option value="active">Active</option>
+                </select>
+                <button id="calorie-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="calorie-result">Calories: 0 kcal</p>
+                <p id="calorie-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="age" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="age_calc">Age Calculator</h2>
+                <input type="date" id="age-dob" class="w-full p-2 mb-4 border rounded">
+                <button id="age-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="age-result">Age: 0 years</p>
+                <p id="age-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="date-diff" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="date_diff_calc">Date Difference</h2>
+                <input type="date" id="date-start" class="w-full p-2 mb-4 border rounded">
+                <input type="date" id="date-end" class="w-full p-2 mb-4 border rounded">
+                <button id="date-diff-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="date-diff-result">Difference: 0 days</p>
+                <p id="date-diff-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="time-duration" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="time_duration_calc">Time Duration</h2>
+                <input type="datetime-local" id="time-start" class="w-full p-2 mb-4 border rounded">
+                <input type="datetime-local" id="time-end" class="w-full p-2 mb-4 border rounded">
+                <button id="time-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="time-result">Duration: 0 hours</p>
+                <p id="time-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="percentage" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="percentage_calc">Percentage Calculator</h2>
+                <input type="number" id="percentage-total" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="total_marks" placeholder="Total Marks">
+                <input type="number" id="percentage-obtained" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="marks_obtained" placeholder="Marks Obtained">
+                <button id="percentage-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="percentage-result">Percentage: 0.00%</p>
+                <p id="percentage-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="cgpa" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="cgpa_calc">CGPA to Percentage</h2>
+                <input type="number" id="cgpa-value" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="cgpa" placeholder="Enter CGPA">
+                <button id="cgpa-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="cgpa-result">Percentage: 0.00%</p>
+                <p id="cgpa-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="unit" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="unit_conv">Unit Converter</h2>
+                <input type="number" id="unit-value" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="value" placeholder="From Value">
+                <select id="unit-from" class="w-full p-2 mb-4 border rounded">
+                    <option value="m">Meter</option><option value="cm">Centimeter</option><option value="km">Kilometer</option>
+                </select>
+                <select id="unit-to" class="w-full p-2 mb-4 border rounded">
+                    <option value="cm">Centimeter</option><option value="m">Meter</option><option value="km">Kilometer</option>
+                </select>
+                <button id="unit-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Convert</button>
+                <p class="text-lg" id="unit-result">Result: 0.00</p>
+                <p id="unit-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="split" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="split_calc">Split Bill</h2>
+                <input type="number" id="split-amount" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="total_amount" placeholder="Total Amount (₹)">
+                <input type="number" id="split-people" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="people" placeholder="Number of People">
+                <input type="number" id="split-tip" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="tip_percentage" placeholder="Tip Percentage (%)">
+                <button id="split-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="split-result">Per Person: 0.00 ₹</p>
+                <p id="split-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="discount" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="discount_calc">Discount Calculator</h2>
+                <input type="number" id="discount-original" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="original_price" placeholder="Original Price (₹)">
+                <input type="number" id="discount-value" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="discount" placeholder="Discount (%) or Amount (₹)">
+                <button id="discount-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="discount-result">Discounted Price: 0.00 ₹</p>
+                <p id="discount-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="fuel" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="fuel_calc">Fuel Cost</h2>
+                <input type="number" id="fuel-distance" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="distance" placeholder="Distance (km)">
+                <input type="number" id="fuel-mileage" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="mileage" placeholder="Mileage (km/l)">
+                <input type="number" id="fuel-price" class="w-full p-2 mb-4 border rounded" data-translate-placeholder="fuel_price" placeholder="Fuel Price (₹/L)">
+                <button id="fuel-calculate" class="bg-blue-500 text-white p-2 rounded" data-translate="calculate">Calculate</button>
+                <p class="text-lg" id="fuel-result">Total Cost: 0.00 ₹</p>
+                <p id="fuel-detail" class="text-sm mt-2"></p>
+            </div>
+            <div id="history" class="calc max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg hidden">
+                <h2 class="text-xl font-bold mb-4" data-translate="history">History</h2>
+                <div id="history-list" class="h-64 overflow-y-auto"></div>
+            </div>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loading = document.getElementById('loading');
+            if (loading) loading.classList.add('hidden');
+            console.log("DOM fully loaded, hiding loading screen");
+
+            const translations = {
+                en: {
+                    calculators: 'Calculators', emi_calc: 'EMI Calculator', sip_calc: 'SIP Calculator', lumpsum_calc: 'Lumpsum Calculator', fd_calc: 'FD Calculator', rd_calc: 'RD Calculator', gst_calc: 'GST Calculator', income_tax_calc: 'Income Tax Calculator', bmi_calc: 'BMI Calculator', bmr_calc: 'BMR Calculator', ideal_weight_calc: 'Ideal Weight Calculator', pregnancy_calc: 'Pregnancy Due Date', calorie_calc: 'Calorie Calculator', age_calc: 'Age Calculator', date_diff_calc: 'Date Difference', time_duration_calc: 'Time Duration', percentage_calc: 'Percentage Calculator', cgpa_calc: 'CGPA to Percentage', unit_conv: 'Unit Converter', split_calc: 'Split Bill', discount_calc: 'Discount Calculator', fuel_calc: 'Fuel Cost', history: 'History', calculate: 'Calculate', search: 'Search Calculator...', loan_amount: 'Loan Amount (₹)', interest_rate: 'Interest Rate (%)', tenure: 'Tenure (Months)', monthly_investment: 'Monthly Investment (₹)', return_rate: 'Expected Annual Return (%)', duration: 'Duration (Years)', one_time_investment: 'One-time Investment (₹)', deposit_amount: 'Deposit Amount (₹)', monthly_deposit: 'Monthly Deposit (₹)', amount: 'Amount (₹)', gst_rate: 'GST Rate (%)', annual_income: 'Annual Income (₹)', age: 'Age (Years)', deduction: 'Deduction (₹)', weight: 'Weight (kg)', height: 'Height (cm)', gender: 'Gender', activity_level: 'Activity Level', weight_kg: 'Weight (kg)', marks_obtained: 'Marks Obtained', total_marks: 'Total Marks', cgpa: 'Enter CGPA', value: 'From Value', total_amount: 'Total Amount (₹)', people: 'Number of People', tip_percentage: 'Tip Percentage (%)', original_price: 'Original Price (₹)', discount: 'Discount (%) or Amount (₹)', distance: 'Distance (km)', mileage: 'Mileage (km/l)', fuel_price: 'Fuel Price (₹/L)'
+                },
+                hi: {
+                    calculators: 'कैलकुलेटर', emi_calc: 'ईएमआई कैलकुलेटर', sip_calc: 'एसआईपी कैलकुलेटर', lumpsum_calc: 'लम्पसम कैलकुलेटर', fd_calc: 'एफडी कैलकुलेटर', rd_calc: 'आरडी कैलकुलेटर', gst_calc: 'जीएसटी कैलकुलेटर', income_tax_calc: 'आयकर कैलकुलेटर', bmi_calc: 'बीएमआई कैलकुलेटर', bmr_calc: 'बीएमआर कैलकुलेटर', ideal_weight_calc: 'आदर्श वजन कैलकुलेटर', pregnancy_calc: 'प्रेगनेंसी ड्यू डेट', calorie_calc: 'कैलोरी कैलकुलेटर', age_calc: 'आयु कैलकुलेटर', date_diff_calc: 'तारीख अंतर', time_duration_calc: 'समय अवधि', percentage_calc: 'प्रतिशत कैलकुलेटर', cgpa_calc: 'सीजीपीए से प्रतिशत', unit_conv: 'इकाई परिवर्तक', split_calc: 'बिल विभाजन', discount_calc: 'छूट कैलकुलेटर', fuel_calc: 'ईंधन लागत', history: 'इतिहास', calculate: 'गणना करें', search: 'कैलकुलेटर खोजें...', loan_amount: 'ऋण राशि (₹)', interest_rate: 'ब्याज दर (%)', tenure: 'अवधि (महीने)', monthly_investment: 'मासिक निवेश (₹)', return_rate: 'अपेक्षित वार्षिक रिटर्न (%)', duration: 'अवधि (वर्ष)', one_time_investment: 'एकमुश्त निवेश (₹)', deposit_amount: 'जमा राशि (₹)', monthly_deposit: 'मासिक जमा (₹)', amount: 'राशि (₹)', gst_rate: 'जीएसटी दर (%)', annual_income: 'वार्षिक आय (₹)', age: 'आयु (वर्ष)', deduction: 'छूट (₹)', weight: 'वजन (किग्रा)', height: 'ऊंचाई (सेमी)', gender: 'लिंग', activity_level: 'गतिविधि स्तर', weight_kg: 'वजन (किग्रा)', marks_obtained: 'प्राप्त अंक', total_marks: 'कुल अंक', cgpa: 'सीजीपीए दर्ज करें', value: 'मान', total_amount: 'कुल राशि (₹)', people: 'लोगों की संख्या', tip_percentage: 'टिप प्रतिशत (%)', original_price: 'मूल कीमत (₹)', discount: 'छूट (%) या राशि (₹)', distance: 'दूरी (किमी)', mileage: 'माइलेज (किमी/ली)', fuel_price: 'ईंधन मूल्य (₹/ली)'
+                },
+                zh: {
+                    calculators: '计算器', emi_calc: 'EMI计算器', sip_calc: 'SIP计算器', lumpsum_calc: '一次性投资计算器', fd_calc: '定期存款计算器', rd_calc: '定期储蓄计算器', gst_calc: 'GST计算器', income_tax_calc: '所得税计算器', bmi_calc: 'BMI计算器', bmr_calc: 'BMR计算器', ideal_weight_calc: '理想体重计算器', pregnancy_calc: '预产期计算器', calorie_calc: '热量计算器', age_calc: '年龄计算器', date_diff_calc: '日期差', time_duration_calc: '时间跨度', percentage_calc: '百分比计算器', cgpa_calc: 'CGPA转百分比', unit_conv: '单位转换器', split_calc: '账单分摊', discount_calc: '折扣计算器', fuel_calc: '燃油成本', history: '历史', calculate: '计算', search: '搜索计算器...', loan_amount: '贷款金额 (₹)', interest_rate: '利率 (%)', tenure: '期限 (月)', monthly_investment: '每月投资 (₹)', return_rate: '预期年回报 (%)', duration: '持续时间 (年)', one_time_investment: '一次性投资 (₹)', deposit_amount: '存款金额 (₹)', monthly_deposit: '每月存款 (₹)', amount: '金额 (₹)', gst_rate: 'GST率 (%)', annual_income: '年收入 (₹)', age: '年龄 (年)', deduction: '扣除额 (₹)', weight: '体重 (公斤)', height: '身高 (厘米)', gender: '性别', activity_level: '活动水平', weight_kg: '体重 (公斤)', marks_obtained: '获得分数', total_marks: '总分', cgpa: '输入CGPA', value: '值', total_amount: '总金额 (₹)', people: '人数', tip_percentage: '小费百分比 (%)', original_price: '原价 (₹)', discount: '折扣 (%)或金额 (₹)', distance: '距离 (公里)', mileage: '里程 (公里/升)', fuel_price: '燃油价格 (₹/升)'
+                },
+                es: {
+                    calculators: 'Calculadoras', emi_calc: 'Calculadora EMI', sip_calc: 'Calculadora SIP', lumpsum_calc: 'Calculadora de Inversión Única', fd_calc: 'Calculadora de Depósito Fijo', rd_calc: 'Calculadora de Depósito Recurrente', gst_calc: 'Calculadora GST', income_tax_calc: 'Calculadora de Impuestos', bmi_calc: 'Calculadora de IMC', bmr_calc: 'Calculadora de BMR', ideal_weight_calc: 'Calculadora de Peso Ideal', pregnancy_calc: 'Calculadora de Fecha de Parto', calorie_calc: 'Calculadora de Calorías', age_calc: 'Calculadora de Edad', date_diff_calc: 'Diferencia de Fechas', time_duration_calc: 'Duración del Tiempo', percentage_calc: 'Calculadora de Porcentajes', cgpa_calc: 'CGPA a Porcentaje', unit_conv: 'Convertidor de Unidades', split_calc: 'División de Cuenta', discount_calc: 'Calculadora de Descuentos', fuel_calc: 'Estimador de Costo de Combustible', history: 'Historial', calculate: 'Calcular', search: 'Buscar calculadora...', loan_amount: 'Monto del Préstamo (₹)', interest_rate: 'Tasa de Interés (%)', tenure: 'Plazo (Meses)', monthly_investment: 'Inversión Mensual (₹)', return_rate: 'Retorno Anual Esperado (%)', duration: 'Duración (Años)', one_time_investment: 'Inversión Única (₹)', deposit_amount: 'Monto del Depósito (₹)', monthly_deposit: 'Depósito Mensual (₹)', amount: 'Monto (₹)', gst_rate: 'Tasa GST (%)', annual_income: 'Ingreso Anual (₹)', age: 'Edad (Años)', deduction: 'Deducción (₹)', weight: 'Peso (kg)', height: 'Altura (cm)', gender: 'Género', activity_level: 'Nivel de Actividad', weight_kg: 'Peso (kg)', marks_obtained: 'Puntuación Obtenida', total_marks: 'Puntuación Total', cgpa: 'Ingresar CGPA', value: 'Valor', total_amount: 'Monto Total (₹)', people: 'Número de Personas', tip_percentage: 'Porcentaje de Propina (%)', original_price: 'Precio Original (₹)', discount: 'Descuento (%) o Monto (₹)', distance: 'Distancia (km)', mileage: 'Kilometraje (km/l)', fuel_price: 'Precio del Combustible (₹/l)'
+                },
+                ar: {
+                    calculators: 'آلات حاسبة', emi_calc: 'حاسبة الدفعات الشهرية', sip_calc: 'حاسبة الاستثمار الدوري', lumpsum_calc: 'حاسبة الاستثمار الفردي', fd_calc: 'حاسبة الإيداع الثابت', rd_calc: 'حاسبة الإيداع المتكرر', gst_calc: 'حاسبة ضريبة القيمة المضافة', income_tax_calc: 'حاسبة الضرائب على الدخل', bmi_calc: 'حاسبة مؤشر كتلة الجسم', bmr_calc: 'حاسبة معدل الأيض الأساسي', ideal_weight_calc: 'حاسبة الوزن المثالي', pregnancy_calc: 'حاسبة موعد الولادة', calorie_calc: 'حاسبة السعرات الحرارية', age_calc: 'حاسبة العمر', date_diff_calc: 'فرق التواريخ', time_duration_calc: 'مدة الوقت', percentage_calc: 'حاسبة النسبة المئوية', cgpa_calc: 'CGPA إلى نسبة مئوية', unit_conv: 'محول الوحدات', split_calc: 'حاسبة تقسيم الفاتورة', discount_calc: 'حاسبة الخصم', fuel_calc: 'محسن تكلفة الوقود', history: 'السجل', calculate: 'حساب', search: 'ابحث عن حاسبة...', loan_amount: 'مبلغ القرض (₹)', interest_rate: 'معدل الفائدة (%)', tenure: 'المدة (أشهر)', monthly_investment: 'الاستثمار الشهري (₹)', return_rate: 'العائد السنوي المتوقع (%)', duration: 'المدة (سنوات)', one_time_investment: 'استثمار واحد (₹)', deposit_amount: 'مبلغ الإيداع (₹)', monthly_deposit: 'الإيداع الشهري (₹)', amount: 'المبلغ (₹)', gst_rate: 'معدل ضريبة القيمة المضافة (%)', annual_income: 'الدخل السنوي (₹)', age: 'العمر (سنوات)', deduction: 'الخصم (₹)', weight: 'الوزن (كجم)', height: 'الطول (سم)', gender: 'الجنس', activity_level: 'مستوى النشاط', weight_kg: 'الوزن (كجم)', marks_obtained: 'الدرجات المحصلة', total_marks: 'الدرجات الإجمالية', cgpa: 'أدخل CGPA', value: 'القيمة', total_amount: 'المبلغ الإجمالي (₹)', people: 'عدد الأشخاص', tip_percentage: 'نسبة البقشيش (%)', original_price: 'السعر الأصلي (₹)', discount: 'الخصم (%) أو المبلغ (₹)', distance: 'المسافة (كم)', mileage: 'الكيلومتراج (كم/ل)', fuel_price: 'سعر الوقود (₹/ل)'
+                },
+                fr: {
+                    calculators: 'Calculateurs', emi_calc: 'Calculatrice EMI', sip_calc: 'Calculatrice SIP', lumpsum_calc: 'Calculatrice de Placement Unique', fd_calc: 'Calculatrice de Dépôt Fixe', rd_calc: 'Calculatrice de Dépôt Récurrent', gst_calc: 'Calculatrice GST', income_tax_calc: 'Calculatrice d\'Impôt sur le Revenu', bmi_calc: 'Calculatrice IMC', bmr_calc: 'Calculatrice BMR', ideal_weight_calc: 'Calculatrice de Poids Idéal', pregnancy_calc: 'Calculatrice de Date d\'Accouchement', calorie_calc: 'Calculatrice de Calories', age_calc: 'Calculatrice d\'Âge', date_diff_calc: 'Différence de Dates', time_duration_calc: 'Durée du Temps', percentage_calc: 'Calculatrice de Pourcentage', cgpa_calc: 'CGPA en Pourcentage', unit_conv: 'Convertisseur d\'Unités', split_calc: 'Partage de Facture', discount_calc: 'Calculatrice de Réduction', fuel_calc: 'Estimateur de Coût de Carburant', history: 'Historique', calculate: 'Calcular', search: 'Rechercher une calculatrice...', loan_amount: 'Montant du Prêt (₹)', interest_rate: 'Taux d\'Intérêt (%)', tenure: 'Durée (Mois)', monthly_investment: 'Investissement Mensuel (₹)', return_rate: 'Rendement Annuel Espéré (%)', duration: 'Durée (Années)', one_time_investment: 'Investissement Unique (₹)', deposit_amount: 'Montant du Dépôt (₹)', monthly_deposit: 'Dépôt Mensuel (₹)', amount: 'Montant (₹)', gst_rate: 'Taux GST (%)', annual_income: 'Revenu Annuel (₹)', age: 'Âge (Ans)', deduction: 'Déduction (₹)', weight: 'Poids (kg)', height: 'Taille (cm)', gender: 'Sexe', activity_level: 'Niveau d\'Activité', weight_kg: 'Poids (kg)', marks_obtained: 'Notes Obtenues', total_marks: 'Total des Notes', cgpa: 'Entrer CGPA', value: 'Valeur', total_amount: 'Montant Total (₹)', people: 'Nombre de Personnes', tip_percentage: 'Pourcentage de Pourboire (%)', original_price: 'Prix Original (₹)', discount: 'Réduction (%) ou Montant (₹)', distance: 'Distance (km)', mileage: 'Kilométrage (km/l)', fuel_price: 'Prix du Carburant (₹/l)'
+                },
+                ru: {
+                    calculators: 'Калькуляторы', emi_calc: 'Калькулятор EMI', sip_calc: 'Калькулятор SIP', lumpsum_calc: 'Калькулятор единовременного взноса', fd_calc: 'Калькулятор фиксированного депозита', rd_calc: 'Калькулятор регулярного депозита', gst_calc: 'Калькулятор GST', income_tax_calc: 'Калькулятор подоходного налога', bmi_calc: 'Калькулятор ИМТ', bmr_calc: 'Калькулятор BMR', ideal_weight_calc: 'Калькулятор идеального веса', pregnancy_calc: 'Калькулятор срока родов', calorie_calc: 'Калькулятор калорий', age_calc: 'Калькулятор возраста', date_diff_calc: 'Разница дат', time_duration_calc: 'Продолжительность времени', percentage_calc: 'Калькулятор процентов', cgpa_calc: 'CGPA в проценты', unit_conv: 'Конвертер единиц', split_calc: 'Расчет раздела счета', discount_calc: 'Калькулятор скидок', fuel_calc: 'Оценка стоимости топлива', history: 'История', calculate: 'Рассчитать', search: 'Поиск калькулятора...', loan_amount: 'Сумма кредита (₹)', interest_rate: 'Процентная ставка (%)', tenure: 'Срок (Месяцы)', monthly_investment: 'Ежемесячный взнос (₹)', return_rate: 'Ожидаемая годовая доходность (%)', duration: 'Продолжительность (Годы)', one_time_investment: 'Единовременный взнос (₹)', deposit_amount: 'Сумма депозита (₹)', monthly_deposit: 'Ежемесячный депозит (₹)', amount: 'Сумма (₹)', gst_rate: 'Ставка GST (%)', annual_income: 'Годовой доход (₹)', age: 'Возраст (Лет)', deduction: 'Вычет (₹)', weight: 'Вес (кг)', height: 'Рост (см)', gender: 'Пол', activity_level: 'Уровень активности', weight_kg: 'Вес (кг)', marks_obtained: 'Полученные баллы', total_marks: 'Общий балл', cgpa: 'Введите CGPA', value: 'Значение', total_amount: 'Общая сумма (₹)', people: 'Количество людей', tip_percentage: 'Процент чаевых (%)', original_price: 'Исходная цена (₹)', discount: 'Скидка (%) или сумма (₹)', distance: 'Расстояние (км)', mileage: 'Пробег (км/л)', fuel_price: 'Цена топлива (₹/л)'
+                },
+                pt: {
+                    calculators: 'Calculadoras', emi_calc: 'Calculadora EMI', sip_calc: 'Calculadora SIP', lumpsum_calc: 'Calculadora de Investimento Único', fd_calc: 'Calculadora de Depósito Fixo', rd_calc: 'Calculadora de Depósito Recorrente', gst_calc: 'Calculadora GST', income_tax_calc: 'Calculadora de Imposto de Renda', bmi_calc: 'Calculadora de IMC', bmr_calc: 'Calculadora de BMR', ideal_weight_calc: 'Calculadora de Peso Ideal', pregnancy_calc: 'Calculadora de Data de Parto', calorie_calc: 'Calculadora de Calorias', age_calc: 'Calculadora de Idade', date_diff_calc: 'Diferença de Datas', time_duration_calc: 'Duração do Tempo', percentage_calc: 'Calculadora de Percentagem', cgpa_calc: 'CGPA para Percentagem', unit_conv: 'Conversor de Unidades', split_calc: 'Divisão de Conta', discount_calc: 'Calculadora de Desconto', fuel_calc: 'Estimador de Custo de Combustível', history: 'Histórico', calculate: 'Calcular', search: 'Pesquisar calculadora...', loan_amount: 'Valor do Empréstimo (₹)', interest_rate: 'Taxa de Juros (%)', tenure: 'Prazo (Meses)', monthly_investment: 'Investimento Mensal (₹)', return_rate: 'Retorno Anual Esperado (%)', duration: 'Duração (Anos)', one_time_investment: 'Investimento Único (₹)', deposit_amount: 'Valor do Depósito (₹)', monthly_deposit: 'Depósito Mensal (₹)', amount: 'Valor (₹)', gst_rate: 'Taxa GST (%)', annual_income: 'Renda Anual (₹)', age: 'Idade (Anos)', deduction: 'Dedução (₹)', weight: 'Peso (kg)', height: 'Altura (cm)', gender: 'Gênero', activity_level: 'Nível de Atividade', weight_kg: 'Peso (kg)', marks_obtained: 'Notas Obtidas', total_marks: 'Notas Totais', cgpa: 'Inserir CGPA', value: 'Valor', total_amount: 'Valor Total (₹)', people: 'Número de Pessoas', tip_percentage: 'Percentual de Gorjeta (%)', original_price: 'Preço Original (₹)', discount: 'Desconto (%) ou Valor (₹)', distance: 'Distância (km)', mileage: 'Quilometragem (km/l)', fuel_price: 'Preço do Combustível (₹/l)'
+                },
+                ja: {
+                    calculators: '電卓', emi_calc: 'EMI電卓', sip_calc: 'SIP電卓', lumpsum_calc: '一括投資電卓', fd_calc: '定期預金電卓', rd_calc: '定期積立電卓', gst_calc: 'GST電卓', income_tax_calc: '所得税電卓', bmi_calc: 'BMI電卓', bmr_calc: 'BMR電卓', ideal_weight_calc: '理想体重電卓', pregnancy_calc: '出産予定日電卓', calorie_calc: 'カロリー電卓', age_calc: '年齢電卓', date_diff_calc: '日付差', time_duration_calc: '時間期間', percentage_calc: 'パーセンテージ電卓', cgpa_calc: 'CGPAからパーセンテージ', unit_conv: '単位変換器', split_calc: '請求書分割', discount_calc: '割引電卓', fuel_calc: '燃料コスト見積もり', history: '履歴', calculate: '計算', search: '電卓を検索...', loan_amount: 'ローン額 (₹)', interest_rate: '利率 (%)', tenure: '期間 (月)', monthly_investment: '月額投資 (₹)', return_rate: '期待年利潤 (%)', duration: '期間 (年)', one_time_investment: '一括投資 (₹)', deposit_amount: '預金額 (₹)', monthly_deposit: '月額預金 (₹)', amount: '金額 (₹)', gst_rate: 'GST率 (%)', annual_income: '年収 (₹)', age: '年齢 (年)', deduction: '控除額 (₹)', weight: '体重 (kg)', height: '身長 (cm)', gender: '性別', activity_level: '活動レベル', weight_kg: '体重 (kg)', marks_obtained: '取得点数', total_marks: '総点数', cgpa: 'CGPAを入力', value: '値', total_amount: '総額 (₹)', people: '人数', tip_percentage: 'チップ率 (%)', original_price: '原価 (₹)', discount: '割引 (%)または額 (₹)', distance: '距離 (km)', mileage: '燃費 (km/l)', fuel_price: '燃料価格 (₹/l)'
+                }
+            };
+
+            function updateLanguage(lang) {
+                document.querySelectorAll('[data-translate]').forEach(el => {
+                    const key = el.getAttribute('data-translate');
+                    el.textContent = translations[lang][key] || translations.en[key];
+                });
+                document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
+                    const key = el.getAttribute('data-translate-placeholder');
+                    el.placeholder = translations[lang][key] || translations.en[key];
+                });
+            }
+
+            function showCalculator(calcId) {
+                document.querySelectorAll('.calc').forEach(calc => calc.classList.add('hidden'));
+                document.getElementById(calcId).classList.remove('hidden');
+                document.querySelectorAll('#calc-menu button').forEach(btn => {
+                    btn.classList.toggle('bg-blue-500', btn.getAttribute('data-calc') === calcId);
+                    btn.classList.toggle('text-white', btn.getAttribute('data-calc') === calcId);
+                    btn.classList.toggle('hover:bg-gray-300', btn.getAttribute('data-calc') !== calcId);
+                });
+            }
+
+            function debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
+
+            function searchCalculators(query) {
+                const buttons = document.querySelectorAll('#calc-menu button');
+                buttons.forEach(btn => {
+                    const text = btn.textContent.toLowerCase();
+                    btn.parentElement.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+                });
+            }
+
+            function saveHistory(type, result) {
+                const history = JSON.parse(localStorage.getItem('calcHistory') || '[]');
+                history.unshift({ type, result, date: new Date().toLocaleString() });
+                localStorage.setItem('calcHistory', JSON.stringify(history.slice(0, 50)));
+                updateHistory();
+            }
+
+            function updateHistory() {
+                const historyList = document.getElementById('history-list');
+                const history = JSON.parse(localStorage.getItem('calcHistory') || '[]');
+                historyList.innerHTML = history.map(item => `<p>${item.date}: ${item.type} - ${item.result}</p>`).join('');
+            }
+
+            function calculateEMI() {
+                const amount = parseFloat(document.getElementById('emi-amount').value) || 0;
+                const rate = parseFloat(document.getElementById('emi-rate').value) / 100 / 12 || 0;
+                const tenure = parseFloat(document.getElementById('emi-tenure').value) || 0;
+                const emi = (amount * rate * Math.pow(1 + rate, tenure)) / (Math.pow(1 + rate, tenure) - 1);
+                document.getElementById('emi-result').textContent = `EMI: ${emi.toFixed(2)} ₹`;
+                document.getElementById('emi-detail').textContent = `Loan: ${amount} ₹, Rate: ${(rate * 12 * 100).toFixed(2)}% p.a., Tenure: ${tenure} months`;
+                saveHistory('EMI', `EMI: ${emi.toFixed(2)} ₹`);
+            }
+
+            function calculateSIP() {
+                const amount = parseFloat(document.getElementById('sip-amount').value) || 0;
+                const rate = parseFloat(document.getElementById('sip-rate').value) / 100 / 12 || 0;
+                const tenure = parseFloat(document.getElementById('sip-tenure').value) * 12 || 0;
+                const futureValue = amount * (Math.pow(1 + rate, tenure) - 1) / rate * (1 + rate);
+                document.getElementById('sip-result').textContent = `Future Value: ${futureValue.toFixed(2)} ₹`;
+                document.getElementById('sip-detail').textContent = `Monthly: ${amount} ₹, Rate: ${(rate * 12 * 100).toFixed(2)}% p.a., Tenure: ${tenure / 12} years`;
+                saveHistory('SIP', `Future Value: ${futureValue.toFixed(2)} ₹`);
+            }
+
+            function calculateLumpsum() {
+                const amount = parseFloat(document.getElementById('lumpsum-amount').value) || 0;
+                const rate = parseFloat(document.getElementById('lumpsum-rate').value) / 100 || 0;
+                const tenure = parseFloat(document.getElementById('lumpsum-tenure').value) || 0;
+                const futureValue = amount * Math.pow(1 + rate, tenure);
+                document.getElementById('lumpsum-result').textContent = `Future Value: ${futureValue.toFixed(2)} ₹`;
+                document.getElementById('lumpsum-detail').textContent = `Investment: ${amount} ₹, Rate: ${rate * 100}%, Tenure: ${tenure} years`;
+                saveHistory('Lumpsum', `Future Value: ${futureValue.toFixed(2)} ₹`);
+            }
+
+            function calculateFD() {
+                const amount = parseFloat(document.getElementById('fd-amount').value) || 0;
+                const rate = parseFloat(document.getElementById('fd-rate').value) / 100 || 0;
+                const tenure = parseFloat(document.getElementById('fd-tenure').value) || 0;
+                const frequency = document.getElementById('fd-frequency').value;
+                const n = { monthly: 12, quarterly: 4, yearly: 1 }[frequency];
+                const futureValue = amount * Math.pow(1 + rate / n, tenure * n);
+                document.getElementById('fd-result').textContent = `Maturity Amount: ${futureValue.toFixed(2)} ₹`;
+                document.getElementById('fd-detail').textContent = `Deposit: ${amount} ₹, Rate: ${rate * 100}%, Tenure: ${tenure} months, Frequency: ${frequency}`;
+                saveHistory('FD', `Maturity: ${futureValue.toFixed(2)} ₹`);
+            }
+
+            function calculateRD() {
+                const amount = parseFloat(document.getElementById('rd-amount').value) || 0;
+                const rate = parseFloat(document.getElementById('rd-rate').value) / 100 / 12 || 0;
+                const tenure = parseFloat(document.getElementById('rd-tenure').value) || 0;
+                const futureValue = amount * (Math.pow(1 + rate, tenure) - 1) / rate * (1 + rate);
+                document.getElementById('rd-result').textContent = `Maturity Amount: ${futureValue.toFixed(2)} ₹`;
+                document.getElementById('rd-detail').textContent = `Monthly: ${amount} ₹, Rate: ${(rate * 12 * 100).toFixed(2)}% p.a., Tenure: ${tenure} months`;
+                saveHistory('RD', `Maturity: ${futureValue.toFixed(2)} ₹`);
+            }
+
+            function calculateGST() {
+                const amount = parseFloat(document.getElementById('gst-amount').value) || 0;
+                const rate = parseFloat(document.getElementById('gst-rate').value) || 0;
+                const mode = document.getElementById('gst-mode').value;
+                const gst = mode === 'add' ? amount * rate / 100 : amount * rate / (100 + rate);
+                const total = mode === 'add' ? amount + gst : amount - gst;
+                document.getElementById('gst-result').textContent = `Result: ${total.toFixed(2)} ₹`;
+                document.getElementById('gst-detail').textContent = `Amount: ${amount} ₹, Rate: ${rate}%, ${mode === 'add' ? 'Added' : 'Removed'} GST: ${gst.toFixed(2)} ₹`;
+                saveHistory('GST', `${mode} GST: ${total.toFixed(2)} ₹`);
+            }
+
+            function calculateIncomeTax() {
+                const income = parseFloat(document.getElementById('income-amount').value) || 0;
+                const age = document.getElementById('income-age').value;
+                const deduction = parseFloat(document.getElementById('income-deduction').value) || 0;
+                let tax = 0;
+                const taxable = income - deduction;
+                if (age === 'below60') {
+                    if (taxable > 1000000) tax = (taxable - 1000000) * 0.3;
+                    else if (taxable > 500000) tax = (taxable - 500000) * 0.2;
+                    else if (taxable > 250000) tax = (taxable - 250000) * 0.1;
+                } else {
+                    if (taxable > 1000000) tax = (taxable - 1000000) * 0.3;
+                    else if (taxable > 500000) tax = (taxable - 500000) * 0.2;
+                    else if (taxable > 300000) tax = (taxable - 300000) * 0.1;
+                }
+                document.getElementById('income-result').textContent = `Tax: ${tax.toFixed(2)} ₹`;
+                document.getElementById('income-detail').textContent = `Income: ${income} ₹, Deduction: ${deduction} ₹, Taxable: ${taxable} ₹`;
+                saveHistory('Income Tax', `Tax: ${tax.toFixed(2)} ₹`);
+            }
+
+            function calculateBMI() {
+                const weight = parseFloat(document.getElementById('bmi-weight').value) || 0;
+                const height = parseFloat(document.getElementById('bmi-height').value) / 100 || 0;
+                const bmi = (weight / (height * height)).toFixed(2);
+                document.getElementById('bmi-result').textContent = `BMI: ${bmi}`;
+                document.getElementById('bmi-detail').textContent = `Weight: ${weight} kg, Height: ${height * 100} cm`;
+                saveHistory('BMI', `BMI: ${bmi}`);
+            }
+
+            function calculateBMR() {
+                const weight = parseFloat(document.getElementById('bmr-weight').value) || 0;
+                const height = parseFloat(document.getElementById('bmr-height').value) || 0;
+                const age = parseFloat(document.getElementById('bmr-age').value) || 0;
+                const gender = document.getElementById('bmr-gender').value;
+                const activity = { sedentary: 1.2, active: 1.5 }[document.getElementById('bmr-activity').value] || 1.2;
+                const bmr = gender === 'male' ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age) : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+                const tdee = bmr * activity;
+                document.getElementById('bmr-result').textContent = `BMR: ${bmr.toFixed(2)} kcal, TDEE: ${tdee.toFixed(2)} kcal`;
+                document.getElementById('bmr-detail').textContent = `Weight: ${weight} kg, Height: ${height} cm, Age: ${age}, Gender: ${gender}, Activity: ${document.getElementById('bmr-activity').value}`;
+                saveHistory('BMR', `BMR: ${bmr.toFixed(2)} kcal`);
+            }
+
+            function calculateIdealWeight() {
+                const height = parseFloat(document.getElementById('ideal-height').value) || 0;
+                const gender = document.getElementById('ideal-gender').value;
+                const weight = gender === 'male' ? (height - 100) : (height - 110);
+                document.getElementById('ideal-result').textContent = `Ideal Weight: ${weight.toFixed(2)} kg`;
+                document.getElementById('ideal-detail').textContent = `Height: ${height} cm, Gender: ${gender}`;
+                saveHistory('Ideal Weight', `Ideal: ${weight.toFixed(2)} kg`);
+            }
+
+            function calculatePregnancy() {
+                const lmp = new Date(document.getElementById('pregnancy-lmp').value);
+                const dueDate = new Date(lmp.setDate(lmp.getDate() + 280));
+                document.getElementById('pregnancy-result').textContent = `Due Date: ${dueDate.toLocaleDateString()}`;
+                document.getElementById('pregnancy-detail').textContent = `LMP: ${lmp.toLocaleDateString()}`;
+                saveHistory('Pregnancy', `Due Date: ${dueDate.toLocaleDateString()}`);
+            }
+
+            function calculateCalorie() {
+                const age = parseFloat(document.getElementById('calorie-age').value) || 0;
+                const gender = document.getElementById('calorie-gender').value;
+                const height = parseFloat(document.getElementById('calorie-height').value) || 0;
+                const weight = parseFloat(document.getElementById('calorie-weight').value) || 0;
+                const activity = { sedentary: 1.2, active: 1.5 }[document.getElementById('calorie-activity').value] || 1.2;
+                const bmr = gender === 'male' ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age) : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+                const calories = bmr * activity;
+                document.getElementById('calorie-result').textContent = `Calories: ${calories.toFixed(2)} kcal`;
+                document.getElementById('calorie-detail').textContent = `Age: ${age}, Gender: ${gender}, Height: ${height} cm, Weight: ${weight} kg, Activity: ${document.getElementById('calorie-activity').value}`;
+                saveHistory('Calorie', `Calories: ${calories.toFixed(2)} kcal`);
+            }
+
+            function calculateAge() {
+                const dob = new Date(document.getElementById('age-dob').value);
+                const today = new Date();
+                let age = today.getFullYear() - dob.getFullYear();
+                const m = today.getMonth() - dob.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+                document.getElementById('age-result').textContent = `Age: ${age} years`;
+                document.getElementById('age-detail').textContent = `DOB: ${dob.toLocaleDateString()}`;
+                saveHistory('Age', `Age: ${age} years`);
+            }
+
+            function calculateDateDiff() {
+                const start = new Date(document.getElementById('date-start').value);
+                const end = new Date(document.getElementById('date-end').value);
+                const diff = Math.abs(end - start) / (1000 * 60 * 60 * 24);
+                document.getElementById('date-diff-result').textContent = `Difference: ${diff.toFixed(0)} days`;
+                document.getElementById('date-diff-detail').textContent = `From: ${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
+                saveHistory('Date Diff', `Difference: ${diff.toFixed(0)} days`);
+            }
+
+            function calculateTimeDuration() {
+                const start = new Date(document.getElementById('time-start').value);
+                const end = new Date(document.getElementById('time-end').value);
+                const diff = Math.abs(end - start) / (1000 * 60 * 60);
+                document.getElementById('time-result').textContent = `Duration: ${diff.toFixed(2)} hours`;
+                document.getElementById('time-detail').textContent = `From: ${start.toLocaleString()} to ${end.toLocaleString()}`;
+                saveHistory('Time Duration', `Duration: ${diff.toFixed(2)} hours`);
+            }
+
+            function calculatePercentage() {
+                const total = parseFloat(document.getElementById('percentage-total').value) || 0;
+                const obtained = parseFloat(document.getElementById('percentage-obtained').value) || 0;
+                const percentage = (obtained / total * 100).toFixed(2);
+                document.getElementById('percentage-result').textContent = `Percentage: ${percentage}%`;
+                document.getElementById('percentage-detail').textContent = `${obtained} / ${total} = ${percentage}%`;
+                saveHistory('Percentage', `${percentage}%`);
+            }
+
+            function calculateCGPA() {
+                const cgpa = parseFloat(document.getElementById('cgpa-value').value) || 0;
+                const percentage = cgpa * 9.5;
+                document.getElementById('cgpa-result').textContent = `Percentage: ${percentage.toFixed(2)}%`;
+                document.getElementById('cgpa-detail').textContent = `CGPA: ${cgpa}`;
+                saveHistory('CGPA', `${percentage.toFixed(2)}%`);
+            }
+
+            function calculateUnit() {
+                const value = parseFloat(document.getElementById('unit-value').value) || 0;
+                const from = document.getElementById('unit-from').value;
+                const to = document.getElementById('unit-to').value;
+                const units = { m: 1, cm: 100, km: 0.001 };
+                const result = (value * units[from] / units[to]).toFixed(2);
+                document.getElementById('unit-result').textContent = `Result: ${result} ${to}`;
+                document.getElementById('unit-detail').textContent = `${value} ${from} = ${result} ${to}`;
+                saveHistory('Unit', `${value} ${from} = ${result} ${to}`);
+            }
+
+            function calculateSplit() {
+                const amount = parseFloat(document.getElementById('split-amount').value) || 0;
+                const people = parseInt(document.getElementById('split-people').value) || 1;
+                const tip = parseFloat(document.getElementById('split-tip').value) || 0;
+                const total = amount + (amount * tip / 100);
+                const perPerson = (total / people).toFixed(2);
+                document.getElementById('split-result').textContent = `Per Person: ${perPerson} ₹`;
+                document.getElementById('split-detail').textContent = `Total: ${total.toFixed(2)} ₹, People: ${people}, Tip: ${tip}%`;
+                saveHistory('Split', `Per Person: ${perPerson} ₹`);
+            }
+
+            function calculateDiscount() {
+                const original = parseFloat(document.getElementById('discount-original').value) || 0;
+                const discount = parseFloat(document.getElementById('discount-value').value) || 0;
+                const final = original * (1 - (isNaN(discount) ? discount / original : discount / 100));
+                document.getElementById('discount-result').textContent = `Discounted Price: ${final.toFixed(2)} ₹`;
+                document.getElementById('discount-detail').textContent = `Original: ${original} ₹, Discount: ${discount} ${isNaN(discount) ? '₹' : '%'} = ${final.toFixed(2)} ₹`;
+                saveHistory('Discount', `Discounted: ${final.toFixed(2)} ₹`);
+            }
+
+            function calculateFuel() {
+                const distance = parseFloat(document.getElementById('fuel-distance').value) || 0;
+                const mileage = parseFloat(document.getElementById('fuel-mileage').value) || 0;
+                const price = parseFloat(document.getElementById('fuel-price').value) || 0;
+                const cost = (distance / mileage) * price;
+                document.getElementById('fuel-result').textContent = `Total Cost: ${cost.toFixed(2)} ₹`;
+                document.getElementById('fuel-detail').textContent = `Distance: ${distance} km, Mileage: ${mileage} km/l, Price: ${price} ₹/l`;
+                saveHistory('Fuel', `Cost: ${cost.toFixed(2)} ₹`);
+            }
+
+            // Event Listeners
+            document.getElementById('language').addEventListener('change', (e) => updateLanguage(e.target.value));
+            document.querySelectorAll('#calc-menu button').forEach(btn => btn.addEventListener('click', () => showCalculator(btn.getAttribute('data-calc'))));
+            document.getElementById('search').addEventListener('input', debounce((e) => searchCalculators(e.target.value), 300));
+            document.getElementById('emi-calculate').addEventListener('click', calculateEMI);
+            document.getElementById('sip-calculate').addEventListener('click', calculateSIP);
+            document.getElementById('lumpsum-calculate').addEventListener('click', calculateLumpsum);
+            document.getElementById('fd-calculate').addEventListener('click', calculateFD);
+            document.getElementById('rd-calculate').addEventListener('click', calculateRD);
+            document.getElementById('gst-calculate').addEventListener('click', calculateGST);
+            document.getElementById('income-calculate').addEventListener('click', calculateIncomeTax);
+            document.getElementById('bmi-calculate').addEventListener('click', calculateBMI);
+            document.getElementById('bmr-calculate').addEventListener('click', calculateBMR);
+            document.getElementById('ideal-calculate').addEventListener('click', calculateIdealWeight);
+            document.getElementById('pregnancy-calculate').addEventListener('click', calculatePregnancy);
+            document.getElementById('calorie-calculate').addEventListener('click', calculateCalorie);
+            document.getElementById('age-calculate').addEventListener('click', calculateAge);
+            document.getElementById('date-diff-calculate').addEventListener('click', calculateDateDiff);
+            document.getElementById('time-calculate').addEventListener('click', calculateTimeDuration);
+            document.getElementById('percentage-calculate').addEventListener('click', calculatePercentage);
+            document.getElementById('cgpa-calculate').addEventListener('click', calculateCGPA);
+            document.getElementById('unit-calculate').addEventListener('click', calculateUnit);
+            document.getElementById('split-calculate').addEventListener('click', calculateSplit);
+            document.getElementById('discount-calculate').addEventListener('click', calculateDiscount);
+            document.getElementById('fuel-calculate').addEventListener('click', calculateFuel);
+
+            // Initial Setup
+            updateLanguage('en');
+            showCalculator('emi');
+            updateHistory();
+        });
+
+        window.addEventListener('load', () => {
+            const loading = document.getElementById('loading');
+            if (loading) loading.classList.add('hidden');
+            console.log("Window fully loaded, ensuring loading screen is hidden");
+        });
+    </script>
+</body>
+</html>
